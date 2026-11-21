@@ -6,7 +6,7 @@ object Config {
     const val HTTP_PORT = 8080
 
     /** Open the app's screen automatically when the glasses boot. Off: it just starts listening. */
-    const val OPEN_ON_BOOT = true
+    const val OPEN_ON_BOOT = false
 
     /** The same tag as the rest of the app, so one filter shows everything: adb logcat -s GlassesProbe */
     const val TAG = "GlassesProbe"
