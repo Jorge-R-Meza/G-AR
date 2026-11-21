@@ -1,0 +1,6 @@
+# Built programs: swiftc -O StreamViewer.swift -o stream-viewer, and the same for FakeGlasses
+stream-viewer
+fake-glasses
+# Fetched reports can hold personal data: never commit them
+reports/
+.DS_Store

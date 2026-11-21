@@ -1,28 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Camera and microphone are asked for at runtime; "adb install -g" grants them at install. -->
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- The microphone is asked for at runtime; setup.sh (or "adb install -g") grants it.
+         No camera permission: the glasses' stream service needs the camera to itself. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Only used to show the glasses' IP address for now; the laptop link will need it too. -->
+    <!-- For the two servers: patient reports from the laptop, and open/close over Wi-Fi. -->
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="false"
-        android:label="Glasses Hello"
+        android:label="@string/app_name"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Keeps the app alive and runs the report server and the Wi-Fi control server. -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false" />
+
+        <!-- Started by Android at every boot once turned on (setup.sh does that). -->
+        <service
+            android:name=".OpenService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/open_service" />
+        </service>
     </application>
 
 </manifest>

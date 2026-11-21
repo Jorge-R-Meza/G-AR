@@ -1,0 +1,7 @@
+websockets>=14     # Deepgram live speech to text
+
+# Only for answers from Claude instead of Meta (ANTHROPIC_API_KEY). Needs Python 3.10 or later.
+# anthropic
+
+# Only for fake_glasses.py --mic
+# sounddevice

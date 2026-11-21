@@ -1,0 +1,7 @@
+# API keys: never commit them
+.env
+__pycache__/
+.venv/
+# What fake_glasses.py heard the assistant say
+*.wav
+.DS_Store
