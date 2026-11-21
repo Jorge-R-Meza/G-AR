@@ -1,0 +1,6 @@
+# Gradle and Android build output
+.gradle/
+build/
+# Machine-specific SDK path
+local.properties
+.DS_Store
