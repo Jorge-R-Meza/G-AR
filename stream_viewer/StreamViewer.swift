@@ -3,7 +3,7 @@
 //
 //  Shows the M6 glasses' live camera stream on this Mac and reads the QR codes in it.
 //  Each code is outlined in the window and printed once when it comes into view.
-//  When a code holds a web link, the link is fetched and the response is saved in the
+//  When a QR code holds a web link, the link is fetched and the response is saved in the
 //  reports folder (next to this program unless --reports says otherwise). A report is
 //  saved again only when it has changed.
 //  A report that is JSON is also sent to the app on the glasses, which shows the patient on
@@ -12,7 +12,8 @@
 //  It also reads the barcodes on medicine packages. Each one is looked up in the FDA's drug
 //  directory (openFDA); what the FDA lists is saved in the reports folder as
 //  medicine-<barcode>.json and sent to the glasses app the same way, which shows the medicine
-//  on its cards in place of the patient.
+//  on its cards in place of the patient. A barcode's digits go to the FDA and nowhere
+//  else: only a QR code's link is ever fetched.
 //
 //  The glasses send one UDP datagram per encoded frame to <target_host>:32888:
 //      byte 0     packet type: 0 = video, 1 = audio, 3 = screenshot fragment
@@ -61,7 +62,7 @@ Usage: stream-viewer [options]
   --barcodes            read every kind of barcode, not only QR codes and medicine barcodes
   --no-medicines        don't read medicine barcodes or look them up at the FDA
   --no-detect           only show the video
-  --no-fetch            read codes but don't fetch the links in them
+  --no-fetch            read QR codes but don't fetch the links in them
   --only-host HOST      only fetch links to this host, such as reports.example.com
   --reports DIR         where fetched reports are saved (default: reports, next to this program)
   --glasses HOST        where the glasses app is, to send reports to (default: where the stream comes from)
@@ -1154,7 +1155,7 @@ var fetcher: ReportFetcher?
 if options.detect && options.fetch {
     fetcher = ReportFetcher(folder: reportsFolder, onlyHost: options.onlyHost)
     fetcher?.onReport = { sendToGlasses($0, as: "report") }
-    print("Links in scanned codes are fetched and saved in \(reportsFolder.path)")
+    print("Links in scanned QR codes are fetched and saved in \(reportsFolder.path)")
 }
 var medicines: MedicineLookup?
 if options.detect && options.medicines {
@@ -1167,8 +1168,14 @@ if link != nil && (fetcher != nil || medicines != nil) {
 }
 detector?.onCodes = { codes in
     for code in codeLog.note(codes) {
-        fetcher?.fetch(code.payload)
-        medicines?.lookUp(code)
+        // Only a QR code may hold a link to fetch. Every other kind of barcode is a product
+        // code at most: its digits go to the FDA's directory and nowhere else, so a link
+        // printed as a barcode is never followed.
+        if code.kind == "QR" {
+            fetcher?.fetch(code.payload)
+        } else {
+            medicines?.lookUp(code)
+        }
     }
     if let viewer {
         DispatchQueue.main.async { viewer.show(codes: codes) }

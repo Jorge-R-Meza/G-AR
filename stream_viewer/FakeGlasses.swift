@@ -11,6 +11,8 @@
 //                         [--qr "text"]     puts a QR code holding that text in the picture
 //                         [--ean13 DIGITS]  puts a retail barcode in the picture: 13 digits,
 //                                           or the 12 of a UPC-A, as on a medicine package
+//                         [--code128 "text"] puts a Code 128 barcode holding that text in the
+//                                           picture, to check that a link in one isn't fetched
 //
 
 import AppKit
@@ -29,6 +31,7 @@ var width = 1280, height = 720
 var seconds = 10.0
 var qrText: String?
 var eanDigits: String?
+var code128Text: String?
 let framesPerSecond = 24       // same as the glasses
 let bitRate = 4_000_000        // same as the glasses
 
@@ -47,6 +50,7 @@ while !args.isEmpty {
     case "--seconds": seconds = Double(value) ?? seconds
     case "--qr": qrText = value
     case "--ean13": eanDigits = value.count == 12 ? "0" + value : value
+    case "--code128": code128Text = value
     default: fail("Unknown option \(flag)")
     }
 }
@@ -141,6 +145,16 @@ let qrImage: CGImage? = qrText.flatMap { text in
 }
 if qrText != nil && qrImage == nil { fail("Couldn't make a QR code for --qr") }
 
+/// The barcode for --code128, one pixel per module, with its clear margins.
+let code128Image: CGImage? = code128Text.flatMap { text in
+    guard let message = text.data(using: .ascii), let filter = CIFilter(name: "CICode128BarcodeGenerator") else { return nil }
+    filter.setValue(message, forKey: "inputMessage")
+    filter.setValue(10, forKey: "inputQuietSpace")
+    guard let output = filter.outputImage else { return nil }
+    return CIContext().createCGImage(output, from: output.extent)
+}
+if code128Text != nil && code128Image == nil { fail("Couldn't make a Code 128 barcode for --code128 (plain ASCII only)") }
+
 /// The bars of the barcode for --ean13: 95 modules, true where a module is dark.
 let eanModules: [Bool]? = eanDigits.map { text in
     let digits = text.compactMap(\.wholeNumberValue)
@@ -191,6 +205,17 @@ func draw(frame: Int, into buffer: CVPixelBuffer) {
         context.fill(cardRect)
         context.interpolationQuality = .none   // keep the modules' edges sharp
         context.draw(qrImage, in: cardRect.insetBy(dx: card / 10, dy: card / 10))
+    }
+
+    // The Code 128 barcode runs across the lower part of the picture, below the moving square.
+    if let code128Image {
+        let module = max(1, CGFloat((width - 40) / code128Image.width))   // whole pixels, so bars stay sharp
+        let size = CGSize(width: CGFloat(code128Image.width) * module, height: CGFloat(height) / 5)
+        let rect = CGRect(x: (CGFloat(width) - size.width) / 2, y: CGFloat(height) * 0.17, width: size.width, height: size.height)
+        context.setFillColor(.white)
+        context.fill(rect.insetBy(dx: 0, dy: -8))
+        context.interpolationQuality = .none
+        context.draw(code128Image, in: rect)
     }
 
     // The barcode sits on a white card in the top-left corner, with the clear margin a reader needs.
